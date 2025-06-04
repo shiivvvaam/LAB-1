@@ -1,0 +1,90 @@
+  …
+  <script>
+    const chatbox = document.getElementById("chatbox");
+    const queryInput = document.getElementById("query");
+    const sendButton = document.getElementById("send");
+    const typingIndicator = document.getElementById("typingIndicator");
+
+    // Remove welcome message when first message is sent
+    let hasMessages = false;
+    function removeWelcomeMessage() {
+      if (!hasMessages) {
+        const welcomeMsg = document.querySelector(".welcome-message");
+        if (welcomeMsg) {
+          welcomeMsg.style.animation = "messageSlide 0.3s ease-out reverse";
+          setTimeout(() => welcomeMsg.remove(), 300);
+        }
+        hasMessages = true;
+      }
+    }
+
+    function appendMessage(text, isUser = false, isError = false) {
+      removeWelcomeMessage();
+      const messageDiv = document.createElement("div");
+      messageDiv.className = `message ${isUser ? "user" : "bot"}${isError ? " error-message" : ""}`;
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<img src="bot.png" alt="Bot">';
+      const content = document.createElement("div");
+      content.className = "message-content";
+      content.textContent = text;
+      if (isUser) {
+        messageDiv.appendChild(content);
+        messageDiv.appendChild(avatar);
+      } else {
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(content);
+      }
+      chatbox.appendChild(messageDiv);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      typingIndicator.style.display = "flex";
+    }
+    function hideTypingIndicator() {
+      typingIndicator.style.display = "none";
+    }
+
+    // ← Paste your async sendQuestion function here:
+    async function sendQuestion() {
+      const question = queryInput.value.trim();
+      if (!question) return;
+
+      appendMessage(question, true);
+      queryInput.value = "";
+      showTypingIndicator();
+
+      try {
+        const resp = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: question })
+        });
+        const data = await resp.json();
+        hideTypingIndicator();
+        appendMessage(data.answer);
+      } catch (err) {
+        hideTypingIndicator();
+        appendMessage("Error contacting server.", false, true);
+      } finally {
+        // re-enable input if you disabled it earlier
+        queryInput.disabled = false;
+        sendButton.disabled = false;
+        sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        queryInput.focus();
+      }
+    }
+
+    // Wire up the click/Enter events:
+    sendButton.addEventListener("click", sendQuestion);
+    queryInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !queryInput.disabled) {
+        sendQuestion();
+      }
+    });
+
+    queryInput.focus();
+  </script>
+</body>
+</html>
